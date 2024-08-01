@@ -1,0 +1,11 @@
+Flask
+Flask-SocketIO
+eventlet
+pika
+SQLAlchemy
+psycopg2-binary
+Flask-SQLAlchemy
+python-dotenv
+requests
+flask-socketio
+openai

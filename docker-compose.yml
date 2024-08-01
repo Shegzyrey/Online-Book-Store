@@ -1,0 +1,94 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq_dashboard
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  api_db:
+    image: bitnami/postgresql:latest
+    container_name: api_db
+    ports:
+      - "54321:5432"
+    environment:
+      - POSTGRESQL_PASSWORD=admin
+      - POSTGRESQL_DATABASE=public
+
+  order_db:
+    image: bitnami/postgresql:latest
+    container_name: order_db
+    ports:
+      - "54322:5432"
+    environment:
+      - POSTGRESQL_PASSWORD=admin
+      - POSTGRESQL_DATABASE=public
+
+
+  inventory_db:
+    image: bitnami/postgresql:latest
+    container_name: inventory_db
+    ports:
+      - "54323:5432"
+    environment:
+      - POSTGRESQL_PASSWORD=admin
+      - POSTGRESQL_DATABASE=public
+
+  api_service:
+    build: ./gateway
+    depends_on:
+      - rabbitmq
+      - api_db
+      - websocket
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://postgres:admin@api_db:5432/public
+      - WEBSOCKET_URL=http://websocket:5010
+    ports:
+      - "5009:5000"
+
+  order_service:
+    build: ./order_processor
+    depends_on:
+      - rabbitmq
+      - order_db
+      - websocket
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://postgres:admin@order_db:5432/public
+      - WEBSOCKET_URL=http://websocket:5010
+
+  inventory_service:
+    build: ./inventory_processor
+    depends_on:
+      - rabbitmq
+      - inventory_db
+      - websocket
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - DATABASE_URL=postgresql://postgres:admin@inventory_db:5432/public
+      - WEBSOCKET_URL=http://websocket:5010
+
+  websocket:
+    build:
+      context: ./websocket
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+    ports:
+      - "5010:5010"
+
+  client_websocket:
+    build:
+      context: ./websocket_client
+      dockerfile: Dockerfile
+    depends_on:
+      - rabbitmq
+      - websocket
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - WEBSOCKET_URL=http://websocket:5010
+
